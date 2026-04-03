@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useCallback, useState } from "react";
 import {
-  gameSounds, playVoice, preloadVoices, startMusic, stopMusic,
+  gameSounds, playVoice, preloadVoices, setActiveMinister, startMusic, stopMusic,
 } from "@/game/utils/sounds";
 import {
   T, LEVELS, ENEMY_STATS, COMBO_MULTIPLIERS, COMBO_TIMEOUT, COMBO_COLORS,
@@ -115,7 +115,8 @@ export const GameCanvas: React.FC<GameCanvasProps> = ({ minister, levelId, onBac
   useEffect(() => {
     const lvl = LEVELS.find((l) => l.id === levelId) ?? LEVELS[0];
     levelRef.current = lvl;
-    preloadVoices();
+    setActiveMinister(minister.id);
+    preloadVoices(minister.id);
     startMusic();
 
     itemsRef.current = lvl.items.map((d) => ({ ...d, alive: true, respawnAt: 0 }));
@@ -296,8 +297,12 @@ export const GameCanvas: React.FC<GameCanvasProps> = ({ minister, levelId, onBac
     if (!rect || !touch) return;
     const x = touch.clientX - rect.left;
     const y = touch.clientY - rect.top;
-    if (x > rect.width * 0.7 && y > rect.height * 0.6) { activateSkill(); return; }
-    if (x > rect.width * 0.5 && y > rect.height * 0.75) {
+    const rw = rect.width;
+    const rh = rect.height;
+    // Skill button: right side, upper-middle area
+    if (x > rw * 0.65 && y > rh * 0.35 && y < rh * 0.6) { activateSkill(); return; }
+    // Dash button: right side, just below skill
+    if (x > rw * 0.65 && y > rh * 0.6 && y < rh * 0.8) {
       const d = dashRef.current;
       if (!d.active && d.cooldown <= 0) {
         d.active = true; d.timer = DASH_DUR;
@@ -307,7 +312,7 @@ export const GameCanvas: React.FC<GameCanvasProps> = ({ minister, levelId, onBac
       }
       return;
     }
-    if (x < rect.width * 0.5) {
+    if (x < rw * 0.6) {
       joystickRef.current = { active: true, cx: x, cy: y, dx: 0, dy: 0 };
     }
   }, [activateSkill]);
@@ -1278,27 +1283,35 @@ export const GameCanvas: React.FC<GameCanvasProps> = ({ minister, levelId, onBac
       c.fillText("WASD = pohyb  |  SHIFT = dash  |  SPACE = skill  |  1-4 = zmeniť", cw / 2, ch - 6);
 
       if ("ontouchstart" in window) {
-        const btnX = cw - 70;
-        const btnY = ch - 130;
+        // Skill button - right side, vertically centered
+        const btnX = cw - 60;
+        const btnY = ch * 0.42;
         c.beginPath();
-        c.arc(btnX, btnY, 32, 0, Math.PI * 2);
-        c.fillStyle = skillReady ? "rgba(255,215,0,0.2)" : "rgba(100,100,100,0.15)";
+        c.arc(btnX, btnY, 36, 0, Math.PI * 2);
+        c.fillStyle = skillReady ? "rgba(255,215,0,0.25)" : "rgba(100,100,100,0.15)";
         c.fill();
-        c.strokeStyle = skillReady ? "rgba(255,215,0,0.5)" : "rgba(100,100,100,0.2)";
+        c.strokeStyle = skillReady ? "rgba(255,215,0,0.6)" : "rgba(100,100,100,0.25)";
         c.lineWidth = 2;
         c.stroke();
-        c.font = "22px sans-serif";
+        c.font = "26px sans-serif";
         c.textAlign = "center";
-        c.fillText(currentSkill.icon, btnX, btnY + 7);
+        c.fillText(currentSkill.icon, btnX, btnY + 8);
+        c.fillStyle = skillReady ? "rgba(255,215,0,0.8)" : "rgba(255,255,255,0.3)";
+        c.font = "bold 9px sans-serif";
+        c.fillText(currentSkill.name, btnX, btnY + 28);
 
-        // Dash button
+        // Dash button - below skill button
+        const dashBtnY = ch * 0.62;
         c.beginPath();
-        c.arc(cw - 70, ch - 75, 24, 0, Math.PI * 2);
-        c.fillStyle = dashCd.cooldown <= 0 ? "rgba(255,215,0,0.15)" : "rgba(100,100,100,0.1)";
+        c.arc(btnX, dashBtnY, 28, 0, Math.PI * 2);
+        c.fillStyle = dashCd.cooldown <= 0 ? "rgba(255,215,0,0.2)" : "rgba(100,100,100,0.1)";
         c.fill();
-        c.font = "11px sans-serif";
-        c.fillStyle = "rgba(255,255,255,0.4)";
-        c.fillText("DASH", cw - 70, ch - 72);
+        c.strokeStyle = dashCd.cooldown <= 0 ? "rgba(255,215,0,0.4)" : "rgba(100,100,100,0.15)";
+        c.lineWidth = 1.5;
+        c.stroke();
+        c.font = "bold 12px sans-serif";
+        c.fillStyle = dashCd.cooldown <= 0 ? "rgba(255,215,0,0.7)" : "rgba(255,255,255,0.3)";
+        c.fillText("DASH", btnX, dashBtnY + 5);
       }
 
       const joy = joystickRef.current;

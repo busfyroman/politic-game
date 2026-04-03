@@ -28,7 +28,7 @@ const GamePage: React.FC = () => {
   const handleSelect = useCallback((m: MinisterDef) => {
     setSelected(m);
     gameSounds.init();
-    preloadVoices();
+    preloadVoices(m.id);
     setPhase("levels");
   }, []);
 

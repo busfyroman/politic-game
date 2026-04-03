@@ -251,28 +251,46 @@ export const stopMusic = () => {
   musicGain = null;
 };
 
-const VOICE_COUNT = 30;
-const voicePool: HTMLAudioElement[] = [];
-let voicesPreloaded = false;
-let lastVoiceIdx = -1;
+const VOICE_MAP: Record<string, number[]> = {
+  "danko-andrej":       [1, 2, 3, 4, 5, 6, 7, 8, 9, 10],
+  "robert-fico":        [11, 12, 13, 14, 15, 16, 17, 18, 19, 20],
+  "simkovicova":        [21, 22, 23, 24, 25, 26, 27, 28, 29, 30],
+  "robert-kalinak":     [1, 2, 3, 4, 5, 11, 12, 13, 14, 15],
+  "matus-sutaj-estok":  [11, 12, 13, 14, 15, 21, 22, 23, 24, 25],
+  "rudolf-huliak":      [1, 2, 3, 6, 7, 8, 21, 22, 26, 27],
+};
 
-export const preloadVoices = () => {
+const allVoices: Map<number, HTMLAudioElement> = new Map();
+let voicesPreloaded = false;
+let lastVoiceNum = -1;
+let activeMinisterId = "";
+
+export const preloadVoices = (ministerId?: string) => {
+  if (ministerId) activeMinisterId = ministerId;
   if (voicesPreloaded) return;
   voicesPreloaded = true;
-  for (let i = 1; i <= VOICE_COUNT; i++) {
+  for (let i = 1; i <= 30; i++) {
     const a = new Audio(`/audio/voice${i}.mp3`);
     a.preload = "auto";
     a.volume = 0.7;
-    voicePool.push(a);
+    allVoices.set(i, a);
   }
 };
 
+export const setActiveMinister = (ministerId: string) => {
+  activeMinisterId = ministerId;
+};
+
 export const playVoice = (vol = 0.7) => {
-  if (voicePool.length === 0) { preloadVoices(); return; }
-  let idx = Math.floor(Math.random() * voicePool.length);
-  if (idx === lastVoiceIdx) idx = (idx + 1) % voicePool.length;
-  lastVoiceIdx = idx;
-  const a = voicePool[idx];
+  if (allVoices.size === 0) { preloadVoices(); return; }
+  const pool = VOICE_MAP[activeMinisterId] ?? Array.from({ length: 30 }, (_, i) => i + 1);
+  if (pool.length === 0) return;
+  let num = pool[Math.floor(Math.random() * pool.length)];
+  if (num === lastVoiceNum && pool.length > 1) {
+    num = pool[(pool.indexOf(num) + 1) % pool.length];
+  }
+  lastVoiceNum = num;
+  const a = allVoices.get(num);
   if (!a) return;
   a.volume = vol;
   a.currentTime = 0;
@@ -280,7 +298,7 @@ export const playVoice = (vol = 0.7) => {
 };
 
 export const stopVoice = () => {
-  for (const a of voicePool) {
+  for (const a of allVoices.values()) {
     if (!a.paused) { a.pause(); a.currentTime = 0; }
   }
 };
