@@ -7,8 +7,9 @@ import {
 import {
   T, LEVELS, ENEMY_STATS, COMBO_MULTIPLIERS, COMBO_TIMEOUT, COMBO_COLORS,
   SKILLS, SKILL_QUOTES, STEAL_QUOTES, CAUGHT_QUOTES, VOICE_QUOTES,
-  GASPAR, parseTile,
+  GASPAR, CATCH_QUESTS, parseTile,
   type LevelDef, type EnemyType, type TileType, type MinisterDef,
+  type CatchQuest, type CatchQuestOption,
 } from "@/game/data/gameConfig";
 
 const PS = 26;
@@ -97,8 +98,10 @@ export const GameCanvas: React.FC<GameCanvasProps> = ({ minister, levelId, onBac
   const dashRef = useRef({ active: false, timer: 0, cooldown: 0, dx: 0, dy: 0 });
   const trailRef = useRef<{ x: number; y: number; born: number }[]>([]);
   const screenFlashRef = useRef({ active: false, color: "", born: 0, duration: 0 });
+  const questActiveRef = useRef(false);
 
   const [, forceRender] = useState(0);
+  const [activeQuest, setActiveQuest] = useState<{ quest: CatchQuest; basePenalty: number } | null>(null);
 
   useEffect(() => {
     const img = new Image();
@@ -130,6 +133,7 @@ export const GameCanvas: React.FC<GameCanvasProps> = ({ minister, levelId, onBac
     comboRef.current = { count: 0, lastPickup: 0 };
     floatsRef.current = []; particlesRef.current = [];
     completedRef.current = false; pausedRef.current = false;
+    questActiveRef.current = false; setActiveQuest(null);
     gasparRef.current = { active: false, x: 0, y: 0, targetX: 0, targetY: 0, phase: "done", timer: 0, moneyParticles: [] };
     dashRef.current = { active: false, timer: 0, cooldown: 0, dx: 0, dy: 0 };
     trailRef.current = [];
@@ -266,7 +270,7 @@ export const GameCanvas: React.FC<GameCanvasProps> = ({ minister, levelId, onBac
   useEffect(() => {
     const down = (e: KeyboardEvent) => {
       keysRef.current.add(e.code);
-      if (e.code === "Escape") pausedRef.current = !pausedRef.current;
+      if (e.code === "Escape" && !questActiveRef.current) pausedRef.current = !pausedRef.current;
       if (e.code === "Space" && !e.repeat) { e.preventDefault(); activateSkill(); }
       if (e.code === "Digit1") skillIndexRef.current = 0;
       if (e.code === "Digit2") skillIndexRef.current = 1;
@@ -523,20 +527,22 @@ export const GameCanvas: React.FC<GameCanvasProps> = ({ minister, levelId, onBac
           }
 
           if (distP < CATCH_R && invulnRef.current <= 0) {
-            const penalty = Math.floor(scoreRef.current * 0.15);
-            scoreRef.current = Math.max(0, scoreRef.current - penalty);
+            const basePenalty = Math.floor(scoreRef.current * 0.15);
             invulnRef.current = INVULN_MS / 1000;
             catchesRef.current++;
             comboRef.current.count = 0;
             shake(1.5);
             screenFlash("#ef444460", 0.3);
-            addFloat(`-${penalty} €`, p.x, p.y - 20, "#ef4444", 1, 18);
             addParticles(p.x, p.y, "#ef4444", 15, 80);
             gameSounds.caught();
             playVoice(0.9);
-            addFloat(`"${CAUGHT_QUOTES[Math.floor(Math.random() * CAUGHT_QUOTES.length)]}"`, p.x, p.y - 45, "#fca5a5", 2);
             e.chasing = false;
             e.alertCooldown = 2;
+
+            const quest = CATCH_QUESTS[Math.floor(Math.random() * CATCH_QUESTS.length)];
+            questActiveRef.current = true;
+            pausedRef.current = true;
+            setActiveQuest({ quest, basePenalty });
           }
         } else {
           e.chasing = false;
@@ -1329,7 +1335,7 @@ export const GameCanvas: React.FC<GameCanvasProps> = ({ minister, levelId, onBac
         c.fill();
       }
 
-      if (pausedRef.current) {
+      if (pausedRef.current && !questActiveRef.current) {
         c.fillStyle = "rgba(0,0,0,0.8)";
         c.fillRect(0, 0, cw, ch);
         c.fillStyle = "#ffd700";
@@ -1376,6 +1382,70 @@ export const GameCanvas: React.FC<GameCanvasProps> = ({ minister, levelId, onBac
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [minister.name, levelId, onComplete]);
 
+  const handleQuestChoice = (option: CatchQuestOption) => {
+    if (!activeQuest) return;
+
+    const penalty = Math.floor(activeQuest.basePenalty * option.penaltyMult);
+    scoreRef.current = Math.max(0, scoreRef.current - penalty);
+
+    if (option.moneyCost) {
+      scoreRef.current = Math.max(0, scoreRef.current - option.moneyCost);
+    }
+
+    wantedRef.current = Math.max(0, Math.min(10, wantedRef.current + option.wantedChange));
+
+    if (option.scatterEnemies) {
+      for (const e of enemiesRef.current) {
+        e.x = e.waypoints[0].x; e.y = e.waypoints[0].y;
+        e.wpIdx = 0; e.chasing = false; e.alertCooldown = 6; e.frozen = false;
+      }
+    }
+
+    if (option.immunity) {
+      immunityTimerRef.current = option.immunity;
+      invulnRef.current = option.immunity;
+    }
+
+    if (option.freezeEnemies) {
+      freezeTimerRef.current = option.freezeEnemies;
+      for (const e of enemiesRef.current) e.frozen = true;
+    }
+
+    addFloat(option.resultText, playerRef.current.x, playerRef.current.y - 40, option.resultColor, 2.5, 16);
+    if (penalty > 0) {
+      addFloat(`-${penalty} €`, playerRef.current.x + 20, playerRef.current.y - 15, "#ef4444", 1, 18);
+    }
+    if (option.moneyCost) {
+      addFloat(`-${option.moneyCost} €`, playerRef.current.x - 20, playerRef.current.y - 15, "#ef4444", 1, 14);
+    }
+    addParticles(playerRef.current.x, playerRef.current.y, option.resultColor, 12);
+
+    if (option.penaltyMult < 0.5) gameSounds.money();
+    else gameSounds.coin();
+
+    questActiveRef.current = false;
+    pausedRef.current = false;
+    setActiveQuest(null);
+  };
+
+  const getOptionHints = (opt: CatchQuestOption): { text: string; positive: boolean }[] => {
+    const hints: { text: string; positive: boolean }[] = [];
+
+    if (opt.penaltyMult === 0) hints.push({ text: "0% penalta", positive: true });
+    else if (opt.penaltyMult < 1) hints.push({ text: `-${Math.round((1 - opt.penaltyMult) * 100)}% penalta`, positive: true });
+    else if (opt.penaltyMult > 1) hints.push({ text: `+${Math.round((opt.penaltyMult - 1) * 100)}% penalta`, positive: false });
+    else hints.push({ text: "Plná penalta", positive: false });
+
+    if (opt.moneyCost) hints.push({ text: `-${opt.moneyCost.toLocaleString("sk-SK")} €`, positive: false });
+    if (opt.wantedChange > 0) hints.push({ text: `Wanted +${opt.wantedChange}`, positive: false });
+    else if (opt.wantedChange < 0) hints.push({ text: `Wanted ${opt.wantedChange}`, positive: true });
+    if (opt.immunity) hints.push({ text: `Imunita ${opt.immunity}s`, positive: true });
+    if (opt.freezeEnemies) hints.push({ text: `Zmrazí ${opt.freezeEnemies}s`, positive: true });
+    if (opt.scatterEnemies) hints.push({ text: "Rozoženie všetkých", positive: true });
+
+    return hints;
+  };
+
   return (
     <div
       ref={containerRef}
@@ -1391,6 +1461,60 @@ export const GameCanvas: React.FC<GameCanvasProps> = ({ minister, levelId, onBac
       >
         ← Späť
       </button>
+
+      {activeQuest && (
+        <div
+          className="absolute inset-0 z-30 flex items-center justify-center bg-black/80 backdrop-blur-sm"
+          onTouchStart={(e) => e.stopPropagation()}
+          onTouchMove={(e) => e.stopPropagation()}
+          onTouchEnd={(e) => e.stopPropagation()}
+        >
+          <div
+            className="mx-4 w-full max-w-md animate-in fade-in zoom-in duration-300 rounded-2xl border border-red-500/30 bg-gradient-to-b from-[#1a0a0a] to-[#0a0a14] p-5 shadow-[0_0_60px_rgba(239,68,68,0.15)]"
+          >
+            <div className="mb-3 text-center">
+              <div className="mb-1 text-4xl">{activeQuest.quest.icon}</div>
+              <h2 className="text-lg font-black text-red-400">{activeQuest.quest.title}</h2>
+              <p className="mt-1 text-xs text-white/40">{activeQuest.quest.description}</p>
+              <div className="mt-2 inline-block rounded-lg bg-red-500/10 px-3 py-1 text-sm font-bold text-red-400">
+                Hrozí penalta: {activeQuest.basePenalty.toLocaleString("sk-SK")} €
+              </div>
+            </div>
+
+            <div className="mt-4 flex flex-col gap-2">
+              {activeQuest.quest.options.map((opt, i) => {
+                const hints = getOptionHints(opt);
+                return (
+                  <button
+                    key={i}
+                    onClick={() => handleQuestChoice(opt)}
+                    className="group flex flex-col gap-1 rounded-xl border border-white/10 bg-white/[0.03] px-4 py-3 text-left transition-all hover:border-yellow-500/40 hover:bg-yellow-900/10 active:scale-[0.98]"
+                  >
+                    <div className="flex items-center gap-2">
+                      <span className="text-lg">{opt.icon}</span>
+                      <span className="text-sm font-bold text-white/80 group-hover:text-yellow-300">{opt.text}</span>
+                    </div>
+                    <div className="flex flex-wrap gap-1.5 pl-7">
+                      {hints.map((h, j) => (
+                        <span
+                          key={j}
+                          className={`rounded px-1.5 py-0.5 text-[10px] font-semibold ${
+                            h.positive
+                              ? "bg-green-500/15 text-green-400"
+                              : "bg-red-500/15 text-red-400"
+                          }`}
+                        >
+                          {h.text}
+                        </span>
+                      ))}
+                    </div>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

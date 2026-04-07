@@ -461,3 +461,114 @@ export const ENEMY_STATS: Record<EnemyType, { speed: number; chaseSpeed: number;
 export const COMBO_MULTIPLIERS = [1, 1.5, 2, 3, 5, 8, 10];
 export const COMBO_TIMEOUT = 2000;
 export const COMBO_COLORS = ["#ffffff", "#fde68a", "#fbbf24", "#f59e0b", "#ef4444", "#dc2626", "#9333ea"];
+
+export interface CatchQuestOption {
+  text: string;
+  icon: string;
+  penaltyMult: number;
+  wantedChange: number;
+  moneyCost?: number;
+  scatterEnemies?: boolean;
+  immunity?: number;
+  freezeEnemies?: number;
+  resultText: string;
+  resultColor: string;
+}
+
+export interface CatchQuest {
+  title: string;
+  description: string;
+  icon: string;
+  options: CatchQuestOption[];
+}
+
+export const CATCH_QUESTS: CatchQuest[] = [
+  {
+    title: "NAKA ťa prichytila pri čine!",
+    description: "Agent NAKA stojí pred tebou so spisom. Čo urobíš?",
+    icon: "🚨",
+    options: [
+      { text: "Zavolať Gašpara Jr.", icon: "🤙", penaltyMult: 0.5, wantedChange: -1, resultText: "Gašpar Jr. to vybavil... čiastočne", resultColor: "#fbbf24" },
+      { text: "Zavolať Gašpara Profíka", icon: "📞", penaltyMult: 0, moneyCost: 2000, wantedChange: -2, resultText: "Tibor to zariadil! Stálo to.", resultColor: "#22c55e" },
+      { text: "Hodiť to na Matoviča", icon: "🤷", penaltyMult: 0, wantedChange: 3, resultText: "Matovič? URČITE za to môže!", resultColor: "#a855f7" },
+      { text: "POLITICKY MOTIVOVANÉ!", icon: "😤", penaltyMult: 0.3, wantedChange: 1, resultText: "Klasika. Funguje vždy.", resultColor: "#f59e0b" },
+    ],
+  },
+  {
+    title: "Policajt ťa zastavil na chodbe!",
+    description: "Muž zákona ti blokuje cestu. Tvoj ťah?",
+    icon: "🚔",
+    options: [
+      { text: "Ukázať poslanecký preukaz", icon: "🪪", penaltyMult: 0, wantedChange: 1, resultText: "Preukaz stačil. Tentokrát.", resultColor: "#60a5fa" },
+      { text: "Podplatiť na mieste", icon: "💶", penaltyMult: 0, moneyCost: 1500, wantedChange: 0, resultText: "Rýchla investícia do slobody!", resultColor: "#22c55e" },
+      { text: "Zavolať Kaliňákovi", icon: "📱", penaltyMult: 0.5, wantedChange: -1, scatterEnemies: true, resultText: "Kaliňák: Všetci domov!", resultColor: "#f472b6" },
+      { text: "Dať nohy na plecia!", icon: "🏃", penaltyMult: 0, wantedChange: 2, immunity: 3, resultText: "Bežíš ako nikdy! 3s imunita!", resultColor: "#34d399" },
+    ],
+  },
+  {
+    title: "Vyšetrovateľ: Máme na teba spis!",
+    description: "Hrubý spis s tvojím menom. Situácia je vážna.",
+    icon: "📋",
+    options: [
+      { text: "Zrušiť celý úrad!", icon: "🏚️", penaltyMult: 1, wantedChange: -3, scatterEnemies: true, resultText: "Úrad zrušený! Všetci domov!", resultColor: "#ef4444" },
+      { text: "Dohodnúť sa diskrétne", icon: "🤝", penaltyMult: 0.3, wantedChange: -2, resultText: "Diskrétna dohoda. Ako vždy.", resultColor: "#22c55e" },
+      { text: "Obviniť médiá", icon: "📰", penaltyMult: 0, wantedChange: 3, resultText: "Médiá za to môžu! Samozrejme!", resultColor: "#a855f7" },
+      { text: "Tváriť sa prekvapene", icon: "🎭", penaltyMult: 0.7, wantedChange: 0, resultText: "Ja? Kradnúť? Nejaký omyl!", resultColor: "#fbbf24" },
+    ],
+  },
+  {
+    title: "Chytili ťa s taškou plnou peňazí!",
+    description: "Taška praskla a eurá sa sypú na zem. Vysvetli to!",
+    icon: "💼",
+    options: [
+      { text: "To sú moje osobné úspory!", icon: "💰", penaltyMult: 0.5, wantedChange: 1, resultText: "Nikto neverí, ale nemajú dôkaz.", resultColor: "#fbbf24" },
+      { text: "Darček na Vianoce!", icon: "🎄", penaltyMult: 0.3, wantedChange: 1, resultText: "V apríli? Nech sa páči...", resultColor: "#22c55e" },
+      { text: "To patrí štátu! (vraciam)", icon: "🏛️", penaltyMult: 1.2, wantedChange: -2, resultText: "Vraciaš štátu. Aký gentleman!", resultColor: "#60a5fa" },
+      { text: "Ponúknuť im polovicu", icon: "🤝", penaltyMult: 0, moneyCost: 2500, wantedChange: -1, scatterEnemies: true, resultText: "Spravodlivé delenie! Všetci happy!", resultColor: "#34d399" },
+    ],
+  },
+  {
+    title: "Kontrola NKÚ — Nesedia ti čísla!",
+    description: "Audítor NKÚ sa díva na tvoje výkazy. Čísla nesedia.",
+    icon: "📊",
+    options: [
+      { text: "Sfalšovať výkazy", icon: "✏️", penaltyMult: 0.2, wantedChange: 2, resultText: "Čísla sa teraz \"zhodujú\"!", resultColor: "#f59e0b" },
+      { text: "Zničiť dôkazy", icon: "🔥", penaltyMult: 0, wantedChange: 3, freezeEnemies: 3, resultText: "Dôkazy? Aké dôkazy? 🔥", resultColor: "#ef4444" },
+      { text: "Chyba v systéme!", icon: "💻", penaltyMult: 0.6, wantedChange: -1, resultText: "IT oddelenie potvrdilo chybu. Asi.", resultColor: "#60a5fa" },
+      { text: "Priznať sa (LOL)", icon: "😇", penaltyMult: 1.5, wantedChange: -5, resultText: "Všetci v šoku! Nikto to nečakal!", resultColor: "#a855f7" },
+    ],
+  },
+  {
+    title: "Agent NAKA: Rozprávaj, alebo idem vyššie!",
+    description: "Agent ťa tlačí k stene. Chce mená. Čo urobíš?",
+    icon: "🕵️",
+    options: [
+      { text: "Zavolať premiérovi", icon: "📞", penaltyMult: 0, wantedChange: 2, immunity: 3, resultText: "Premiér: Nechajte ho! 3s imunita!", resultColor: "#fbbf24" },
+      { text: "Dovolenka v Dubaji (pre agenta)", icon: "✈️", penaltyMult: 0, moneyCost: 3000, wantedChange: -3, resultText: "Agent ide na dovolenku!", resultColor: "#22c55e" },
+      { text: "Tlačovka o atentáte!", icon: "🎤", penaltyMult: 0.5, wantedChange: 0, freezeEnemies: 4, resultText: "Všetci zmrazení! Sledujú tlačovku!", resultColor: "#60a5fa" },
+      { text: "Mlčať a čakať", icon: "🤐", penaltyMult: 0.8, wantedChange: -1, resultText: "Právo nevypovedať. Nudné, funguje.", resultColor: "#9ca3af" },
+    ],
+  },
+  {
+    title: "Niekto ťa natočil na mobil!",
+    description: "Video ako kradneš sa šíri po internete. Konaj rýchlo!",
+    icon: "📱",
+    options: [
+      { text: "Zhabať ten mobil!", icon: "🤳", penaltyMult: 0.3, wantedChange: 2, resultText: "Mobil zhabaný! Ale videli ďalší...", resultColor: "#ef4444" },
+      { text: "Tvrdiť že to je deepfake", icon: "🤖", penaltyMult: 0, wantedChange: 1, resultText: "Deepfake! AI! Dezinformácia!", resultColor: "#a855f7" },
+      { text: "Kúpiť to video", icon: "💸", penaltyMult: 0, moneyCost: 2000, wantedChange: -1, resultText: "Video kúpené a zmazané!", resultColor: "#22c55e" },
+      { text: "Preobliecť sa", icon: "🥸", penaltyMult: 0, wantedChange: 0, immunity: 2, resultText: "Nové oblečenie! 2s imunita!", resultColor: "#34d399" },
+    ],
+  },
+  {
+    title: "Prokurátor: Máme zatykač!",
+    description: "Špeciálny prokurátor mává zatykačom. Toto je vážne.",
+    icon: "⚖️",
+    options: [
+      { text: "Odvolať sa na ústavný súd", icon: "🏛️", penaltyMult: 0.4, wantedChange: -1, resultText: "Súd rozhodne... o 2 roky.", resultColor: "#60a5fa" },
+      { text: "Zaplatiť kauciu!", icon: "💰", penaltyMult: 0, moneyCost: 4000, wantedChange: 0, resultText: "Kaucia zaplatená! Slobodný!", resultColor: "#22c55e" },
+      { text: "Psychická nespôsobilosť", icon: "🤪", penaltyMult: 0, wantedChange: 2, freezeEnemies: 3, resultText: "Znalec potvrdil. Všetci v šoku!", resultColor: "#f472b6" },
+      { text: "Helikoptéra na strechu!", icon: "🚁", penaltyMult: 0, moneyCost: 5000, wantedChange: -2, immunity: 4, resultText: "VIP únik! 4s imunity!", resultColor: "#ffd700" },
+    ],
+  },
+];

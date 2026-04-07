@@ -3,7 +3,7 @@
 import { useState, useCallback } from "react";
 import dynamic from "next/dynamic";
 import Image from "next/image";
-import { MINISTERS, LEVELS, type MinisterDef } from "@/game/data/gameConfig";
+import { MINISTERS, LEVELS, SKILLS, type MinisterDef } from "@/game/data/gameConfig";
 import { gameSounds, preloadVoices } from "@/game/utils/sounds";
 
 const GameCanvas = dynamic(() => import("@/components/GameCanvas"), {
@@ -24,6 +24,7 @@ const GamePage: React.FC = () => {
   const [selected, setSelected] = useState<MinisterDef | null>(null);
   const [levelId, setLevelId] = useState(1);
   const [result, setResult] = useState<ResultData | null>(null);
+  const [showGuide, setShowGuide] = useState(true);
 
   const handleSelect = useCallback((m: MinisterDef) => {
     setSelected(m);
@@ -203,7 +204,119 @@ const GamePage: React.FC = () => {
         <p className="mt-1 text-sm italic text-white/30">Vyber si ministra a začni kradnúť</p>
       </div>
 
-      <div className="mt-6 grid w-full max-w-3xl grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-5">
+      <div className="mt-6 w-full max-w-3xl">
+        <button
+          onClick={() => setShowGuide((v) => !v)}
+          className="mx-auto mb-4 flex items-center gap-2 rounded-xl border border-yellow-500/20 bg-yellow-900/10 px-5 py-2.5 text-sm font-bold text-yellow-400 transition-all hover:border-yellow-500/40 hover:bg-yellow-900/20"
+        >
+          <span className="text-base">📖</span>
+          Ako hrať
+          <span className={`ml-1 text-[10px] transition-transform duration-200 ${showGuide ? "rotate-180" : ""}`}>▼</span>
+        </button>
+
+        {showGuide && (
+          <div className="mb-6 animate-in fade-in slide-in-from-top-2 duration-300 rounded-2xl border border-white/10 bg-white/[0.03] p-5 md:p-6">
+            <div className="grid gap-5 md:grid-cols-2">
+              <div>
+                <h3 className="mb-3 text-sm font-black uppercase tracking-wider text-yellow-400">
+                  Ovládanie — Klávesnica
+                </h3>
+                <div className="space-y-2">
+                  {[
+                    { keys: "W A S D / šípky", action: "Pohyb postavou" },
+                    { keys: "SHIFT", action: "Dash (rýchly únik)" },
+                    { keys: "SPACE", action: "Použiť aktívny skill" },
+                    { keys: "1 – 4", action: "Prepnúť skill" },
+                    { keys: "ESC", action: "Pauza" },
+                  ].map((row) => (
+                    <div key={row.keys} className="flex items-center gap-3">
+                      <span className="inline-block min-w-[120px] rounded-lg bg-white/5 px-2.5 py-1 text-center text-xs font-mono font-bold text-white/70">
+                        {row.keys}
+                      </span>
+                      <span className="text-xs text-white/50">{row.action}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              <div>
+                <h3 className="mb-3 text-sm font-black uppercase tracking-wider text-yellow-400">
+                  Ovládanie — Mobil
+                </h3>
+                <div className="space-y-2">
+                  {[
+                    { keys: "Ľavá strana", action: "Virtuálny joystick" },
+                    { keys: "Pravá – stred", action: "Použiť skill" },
+                    { keys: "Pravá – spodok", action: "Dash" },
+                  ].map((row) => (
+                    <div key={row.keys} className="flex items-center gap-3">
+                      <span className="inline-block min-w-[120px] rounded-lg bg-white/5 px-2.5 py-1 text-center text-xs font-bold text-white/70">
+                        {row.keys}
+                      </span>
+                      <span className="text-xs text-white/50">{row.action}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+
+            <hr className="my-4 border-white/5" />
+
+            <div className="grid gap-5 md:grid-cols-2">
+              <div>
+                <h3 className="mb-3 text-sm font-black uppercase tracking-wider text-yellow-400">
+                  Cieľ hry
+                </h3>
+                <ul className="space-y-1.5 text-xs text-white/50">
+                  <li className="flex gap-2"><span className="text-yellow-500">💰</span>Zbieraj peniaze a dosiahni cieľovú sumu pred koncom času</li>
+                  <li className="flex gap-2"><span className="text-yellow-500">🔗</span>Zberaj rýchlo za sebou a buduj combo pre vyšší násobič</li>
+                  <li className="flex gap-2"><span className="text-yellow-500">🚔</span>Vyhýbaj sa NAKA, polícii a novinárom</li>
+                  <li className="flex gap-2"><span className="text-yellow-500">⚠️</span>Čím viac kradneš, tým vyššia je tvoja „wanted" úroveň</li>
+                </ul>
+              </div>
+
+              <div>
+                <h3 className="mb-3 text-sm font-black uppercase tracking-wider text-yellow-400">
+                  Skilly (stoja peniaze)
+                </h3>
+                <div className="space-y-1.5">
+                  {SKILLS.map((s, i) => (
+                    <div key={s.id} className="flex items-center gap-2 text-xs">
+                      <span className="flex h-5 w-5 items-center justify-center rounded bg-white/5 text-[10px] font-bold text-white/60">{i + 1}</span>
+                      <span>{s.icon}</span>
+                      <span className="font-semibold" style={{ color: s.color }}>{s.name}</span>
+                      <span className="text-white/30">({s.cost.toLocaleString("sk-SK")} €)</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+
+            <hr className="my-4 border-white/5" />
+
+            <div>
+              <h3 className="mb-3 text-sm font-black uppercase tracking-wider text-yellow-400">
+                Nepriatelia
+              </h3>
+              <div className="flex flex-wrap gap-4">
+                {[
+                  { label: "NAKA", color: "#1e3a5f", desc: "Vyšetruje korupciu, prenasleduje ťa" },
+                  { label: "Polícia", color: "#1e4a1e", desc: "Rýchla, ale krátky dosah" },
+                  { label: "Novinári", color: "#4a1e5f", desc: "Zvyšujú tvoju wanted úroveň" },
+                ].map((e) => (
+                  <div key={e.label} className="flex items-center gap-2 text-xs">
+                    <span className="h-3 w-3 rounded-full" style={{ background: e.color }} />
+                    <span className="font-bold text-white/60">{e.label}</span>
+                    <span className="text-white/30">— {e.desc}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
+
+      <div className="grid w-full max-w-3xl grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-5">
         {MINISTERS.map((m) => (
           <button
             key={m.id}
