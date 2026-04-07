@@ -272,6 +272,7 @@ const GamePage: React.FC = () => {
                   <li className="flex gap-2"><span className="text-yellow-500">🔗</span>Zberaj rýchlo za sebou a buduj combo pre vyšší násobič</li>
                   <li className="flex gap-2"><span className="text-yellow-500">🚔</span>Vyhýbaj sa NAKA, polícii a novinárom</li>
                   <li className="flex gap-2"><span className="text-yellow-500">⚠️</span>Čím viac kradneš, tým vyššia je tvoja „wanted" úroveň</li>
+                  <li className="flex gap-2"><span className="text-yellow-500">👵</span>Pristúp k občanom (!) a obalamúť ich Fico-štýlom za peniaze</li>
                 </ul>
               </div>
 

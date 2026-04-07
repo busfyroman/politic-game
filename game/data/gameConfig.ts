@@ -129,9 +129,11 @@ export const T = 40;
 
 export type EnemyType = "naka" | "police" | "journalist";
 export type ItemType = "coin" | "bag" | "gold" | "doc";
+export type CitizenType = "dochodkyna" | "dochodca" | "mamicka" | "robotnik" | "student" | "konspirator";
 
 export interface LevelItemDef { x: number; y: number; type: ItemType; value: number }
 export interface LevelEnemyDef { type: EnemyType; waypoints: { x: number; y: number }[] }
+export interface LevelCitizenDef { x: number; y: number; type: CitizenType }
 export interface RoomLabel { name: string; x: number; y: number }
 
 export interface LevelDef {
@@ -141,6 +143,7 @@ export interface LevelDef {
   map: string[];
   items: LevelItemDef[];
   enemies: LevelEnemyDef[];
+  citizens: LevelCitizenDef[];
   rooms: RoomLabel[];
   spawnX: number;
   spawnY: number;
@@ -327,6 +330,12 @@ export const LEVELS: LevelDef[] = [
       { type: "naka", waypoints: [{ x: 35 * T, y: 21 * T }, { x: 6 * T, y: 21 * T }, { x: 6 * T, y: 28 * T }, { x: 35 * T, y: 28 * T }] },
       { type: "police", waypoints: [{ x: 20 * T, y: 7 * T }, { x: 20 * T, y: 14 * T }, { x: 20 * T, y: 21 * T }, { x: 20 * T, y: 28 * T }] },
     ],
+    citizens: [
+      { x: 8 * T, y: 14 * T, type: "dochodkyna" },
+      { x: 25 * T, y: 7 * T, type: "dochodca" },
+      { x: 15 * T, y: 21 * T, type: "mamicka" },
+      { x: 32 * T, y: 28 * T, type: "robotnik" },
+    ],
   },
   {
     id: 2,
@@ -384,6 +393,13 @@ export const LEVELS: LevelDef[] = [
       { type: "naka", waypoints: [{ x: 35 * T, y: 21 * T }, { x: 5 * T, y: 21 * T }, { x: 5 * T, y: 30 * T }, { x: 35 * T, y: 30 * T }] },
       { type: "police", waypoints: [{ x: 20 * T, y: 6 * T }, { x: 20 * T, y: 13 * T }, { x: 20 * T, y: 21 * T }, { x: 20 * T, y: 30 * T }] },
       { type: "journalist", waypoints: [{ x: 5 * T, y: 30 * T }, { x: 35 * T, y: 30 * T }] },
+    ],
+    citizens: [
+      { x: 10 * T, y: 6 * T, type: "dochodkyna" },
+      { x: 30 * T, y: 13 * T, type: "dochodca" },
+      { x: 15 * T, y: 21 * T, type: "konspirator" },
+      { x: 25 * T, y: 29 * T, type: "mamicka" },
+      { x: 8 * T, y: 29 * T, type: "robotnik" },
     ],
   },
   {
@@ -448,6 +464,14 @@ export const LEVELS: LevelDef[] = [
       { type: "naka", waypoints: [{ x: 5 * T, y: 21 * T }, { x: 35 * T, y: 21 * T }, { x: 35 * T, y: 32 * T }, { x: 5 * T, y: 32 * T }] },
       { type: "police", waypoints: [{ x: 20 * T, y: 6 * T }, { x: 20 * T, y: 14 * T }, { x: 20 * T, y: 21 * T }, { x: 20 * T, y: 32 * T }] },
       { type: "journalist", waypoints: [{ x: 5 * T, y: 32 * T }, { x: 35 * T, y: 32 * T }, { x: 35 * T, y: 21 * T }, { x: 5 * T, y: 21 * T }] },
+    ],
+    citizens: [
+      { x: 8 * T, y: 6 * T, type: "dochodkyna" },
+      { x: 30 * T, y: 6 * T, type: "dochodca" },
+      { x: 20 * T, y: 14 * T, type: "student" },
+      { x: 10 * T, y: 21 * T, type: "konspirator" },
+      { x: 30 * T, y: 21 * T, type: "mamicka" },
+      { x: 15 * T, y: 31 * T, type: "robotnik" },
     ],
   },
 ];
@@ -569,6 +593,156 @@ export const CATCH_QUESTS: CatchQuest[] = [
       { text: "Zaplatiť kauciu!", icon: "💰", penaltyMult: 0, moneyCost: 4000, wantedChange: 0, resultText: "Kaucia zaplatená! Slobodný!", resultColor: "#22c55e" },
       { text: "Psychická nespôsobilosť", icon: "🤪", penaltyMult: 0, wantedChange: 2, freezeEnemies: 3, resultText: "Znalec potvrdil. Všetci v šoku!", resultColor: "#f472b6" },
       { text: "Helikoptéra na strechu!", icon: "🚁", penaltyMult: 0, moneyCost: 5000, wantedChange: -2, immunity: 4, resultText: "VIP únik! 4s imunity!", resultColor: "#ffd700" },
+    ],
+  },
+];
+
+export const CITIZEN_VISUAL: Record<CitizenType, { emoji: string; bodyColor: string; headColor: string; name: string }> = {
+  dochodkyna: { emoji: "👵", bodyColor: "#7a5070", headColor: "#d4b0a0", name: "Dôchodkyňa" },
+  dochodca: { emoji: "👴", bodyColor: "#5a5a70", headColor: "#c0b0a0", name: "Dôchodca" },
+  mamicka: { emoji: "👩", bodyColor: "#8a4060", headColor: "#d4b0a0", name: "Mamička" },
+  robotnik: { emoji: "👷", bodyColor: "#405880", headColor: "#c0a890", name: "Robotník" },
+  student: { emoji: "🎓", bodyColor: "#4a6040", headColor: "#c0b090", name: "Študent" },
+  konspirator: { emoji: "🤔", bodyColor: "#6a6040", headColor: "#c0b080", name: "Konšpirátor" },
+};
+
+export interface CitizenQuestOption {
+  text: string;
+  icon: string;
+  moneyReward: number;
+  moneyCost?: number;
+  wantedChange: number;
+  resultText: string;
+  resultColor: string;
+}
+
+export interface CitizenQuest {
+  title: string;
+  description: string;
+  icon: string;
+  citizenTypes: CitizenType[];
+  options: CitizenQuestOption[];
+}
+
+export const CITIZEN_QUESTS: CitizenQuest[] = [
+  {
+    title: "Nemám z čoho žiť!",
+    description: "Dôchodok mi nestačí na lieky! Pán premiér, pomôžte!",
+    icon: "💊",
+    citizenTypes: ["dochodkyna", "dochodca"],
+    options: [
+      { text: "Zvýšim dôchodok o 100€!", icon: "💶", moneyReward: 500, wantedChange: -1, resultText: "Ďakujem! Tu máte na kampaň!", resultColor: "#22c55e" },
+      { text: "Za to môže Matovič!", icon: "😤", moneyReward: 300, wantedChange: 0, resultText: "Ten Matovič! Máte pravdu!", resultColor: "#f59e0b" },
+      { text: "Tu máte 50€, babička, odo mňa", icon: "🤗", moneyReward: 800, moneyCost: 50, wantedChange: -2, resultText: "Aký ste dobrý! Poviem celej ulici!", resultColor: "#fbbf24" },
+      { text: "Počkajte do volieb", icon: "🤷", moneyReward: 100, wantedChange: 1, resultText: "To hovoríte vždy...", resultColor: "#9ca3af" },
+    ],
+  },
+  {
+    title: "Vy ste hrdina národa!",
+    description: "Pán Fico, ten atentát... Vy ste prežili pre nás! Ste hrdina!",
+    icon: "🫡",
+    citizenTypes: ["dochodkyna", "dochodca"],
+    options: [
+      { text: "Áno, trpím pre Slovensko!", icon: "😢", moneyReward: 800, wantedChange: -2, resultText: "Ste najlepší premiér! Vezmite si!", resultColor: "#ffd700" },
+      { text: "Opozícia ma chcela odstrániť!", icon: "😡", moneyReward: 600, wantedChange: 1, resultText: "Tí zločinci! Volím vás do smrti!", resultColor: "#ef4444" },
+      { text: "Ďakujem za podporu, držte sa!", icon: "🙏", moneyReward: 400, wantedChange: -1, resultText: "Držíme palce, pán premiér!", resultColor: "#60a5fa" },
+      { text: "Kúpte si moju knihu o atentáte!", icon: "📖", moneyReward: 500, wantedChange: 0, resultText: "Beriem tri! Pre celú rodinu!", resultColor: "#a855f7" },
+    ],
+  },
+  {
+    title: "Kde je trinásty dôchodok?!",
+    description: "Volil som vás! Kde je ten trinásty dôchodok čo ste sľúbili?",
+    icon: "💰",
+    citizenTypes: ["dochodca"],
+    options: [
+      { text: "Už je v parlamente, čakáme!", icon: "📋", moneyReward: 300, wantedChange: -1, resultText: "No dobre, ešte počkám...", resultColor: "#60a5fa" },
+      { text: "Pellegrini to podpíše zajtra!", icon: "👆", moneyReward: 400, wantedChange: -1, resultText: "Pellegrini je tiež dobrý chlapec!", resultColor: "#22c55e" },
+      { text: "Opozícia to blokuje!", icon: "🤬", moneyReward: 500, wantedChange: 0, resultText: "Tí hajzli! Zabijem ich!", resultColor: "#ef4444" },
+      { text: "Tu máte zálohu 20€!", icon: "💵", moneyReward: 600, moneyCost: 20, wantedChange: -2, resultText: "Vážite si nás! Na ďalšiu kampaň!", resultColor: "#fbbf24" },
+    ],
+  },
+  {
+    title: "Televízia klame!",
+    description: "Televízia hovorí že kradnete! Ja im neverím, pán premiér!",
+    icon: "📺",
+    citizenTypes: ["dochodca", "dochodkyna"],
+    options: [
+      { text: "Médiá sú prostitútky!", icon: "📺", moneyReward: 600, wantedChange: 1, resultText: "Presne! Ja pozerám len Hlavné Správy!", resultColor: "#ef4444" },
+      { text: "Vy ste múdry človek!", icon: "🤝", moneyReward: 400, wantedChange: -1, resultText: "Hlasovať za vás bude celá rodina!", resultColor: "#22c55e" },
+      { text: "Rozpovedzte to susedom!", icon: "📢", moneyReward: 300, wantedChange: -1, resultText: "Poviem celej dedine!", resultColor: "#60a5fa" },
+      { text: "Poďte na náš mítink!", icon: "🎤", moneyReward: 200, wantedChange: 0, resultText: "Prídem! A zoberiem autobus ľudí!", resultColor: "#f59e0b" },
+    ],
+  },
+  {
+    title: "Škôlky sú plné, všetko je drahé!",
+    description: "Škôlky plné, potraviny drahé, manžel v Anglicku! Pomoc!",
+    icon: "🏫",
+    citizenTypes: ["mamicka"],
+    options: [
+      { text: "Postavíme 500 nových škôlok!", icon: "🏗️", moneyReward: 400, wantedChange: -1, resultText: "Konečne niekto, kto počúva!", resultColor: "#22c55e" },
+      { text: "Za to môže Matovičova vláda!", icon: "😤", moneyReward: 300, wantedChange: 0, resultText: "To je pravda, všetko sa pokazilo!", resultColor: "#f59e0b" },
+      { text: "Dáme prídavky 200€ na dieťa!", icon: "💶", moneyReward: 500, wantedChange: -1, resultText: "Vy ste jediný, kto myslí na rodiny!", resultColor: "#fbbf24" },
+      { text: "Vrátime mužov z Anglicka!", icon: "✈️", moneyReward: 200, wantedChange: 0, resultText: "To by bolo super... ale neverím.", resultColor: "#9ca3af" },
+    ],
+  },
+  {
+    title: "Prepúšťajú nás z fabriky!",
+    description: "V fabrike nás prepúšťajú! Nemáme na hypotéku! Čo s tým?!",
+    icon: "🏭",
+    citizenTypes: ["robotnik"],
+    options: [
+      { text: "Zvýšime minimálnu mzdu na 1000€!", icon: "💪", moneyReward: 500, wantedChange: -1, resultText: "Konečne! Beriem to!", resultColor: "#22c55e" },
+      { text: "Privedieme nové fabriky!", icon: "🏗️", moneyReward: 300, wantedChange: -1, resultText: "Dúfam, že to myslíte vážne...", resultColor: "#60a5fa" },
+      { text: "Za to môžu sankcie na Rusko!", icon: "🇪🇺", moneyReward: 400, wantedChange: 1, resultText: "Hmm, možno máte pravdu...", resultColor: "#f59e0b" },
+      { text: "Choďte na pivo, zajtra bude lepšie!", icon: "🍺", moneyReward: 100, wantedChange: 1, resultText: "Pivo? Vážne? Ďakujem pekne.", resultColor: "#9ca3af" },
+    ],
+  },
+  {
+    title: "Prečo sú učitelia zle platení?!",
+    description: "Učebnice nemáme, učiteľka zarába 700€. Toto je normálne?",
+    icon: "📚",
+    citizenTypes: ["student"],
+    options: [
+      { text: "Investujeme miliardy do školstva!", icon: "📚", moneyReward: 200, wantedChange: 0, resultText: "To hovorí každá vláda...", resultColor: "#9ca3af" },
+      { text: "Choď radšej pracovať!", icon: "🤨", moneyReward: 0, wantedChange: 1, resultText: "OK boomer.", resultColor: "#ef4444" },
+      { text: "Minulá vláda všetko rozkradla!", icon: "😤", moneyReward: 100, wantedChange: 0, resultText: "To je možné...", resultColor: "#f59e0b" },
+      { text: "Obedy zadarmo pre všetkých!", icon: "🍽️", moneyReward: 400, wantedChange: -1, resultText: "No... aspoň niečo.", resultColor: "#22c55e" },
+    ],
+  },
+  {
+    title: "5G veže nás kontrolujú!",
+    description: "Pán premiér! Chemtrails! Bill Gates! WHO nás ovláda!",
+    icon: "🛸",
+    citizenTypes: ["konspirator"],
+    options: [
+      { text: "Máte pravdu, zakážeme to!", icon: "🛸", moneyReward: 600, wantedChange: 1, resultText: "VEDEL SOM TO! Ste jediný pravdivý!", resultColor: "#ffd700" },
+      { text: "Budeme to vyšetrovať!", icon: "🔬", moneyReward: 400, wantedChange: 0, resultText: "Konečne! Urobte to!", resultColor: "#22c55e" },
+      { text: "Čítajte Hlavné Správy!", icon: "📱", moneyReward: 300, wantedChange: 0, resultText: "Čítam denne! Blaha je génius!", resultColor: "#60a5fa" },
+      { text: "WHO nás neovládne!", icon: "🌍", moneyReward: 500, wantedChange: 0, resultText: "Presne! Pryč s globalistami!", resultColor: "#f59e0b" },
+    ],
+  },
+  {
+    title: "Potraviny zdraželi o 30%!",
+    description: "Kto za to môže?! Nemôžem nakŕmiť rodinu! Urobte niečo!",
+    icon: "🛒",
+    citizenTypes: ["mamicka", "robotnik", "dochodkyna"],
+    options: [
+      { text: "Za ceny môže Brusel a sankcie!", icon: "🇪🇺", moneyReward: 400, wantedChange: 0, resultText: "Ten Brusel! Prečo tam chodíte?", resultColor: "#f59e0b" },
+      { text: "Znížime DPH na potraviny!", icon: "📉", moneyReward: 500, wantedChange: -1, resultText: "To znie dobre! Kedy?", resultColor: "#22c55e" },
+      { text: "Kupujte slovenské, nie import!", icon: "🇸🇰", moneyReward: 200, wantedChange: 0, resultText: "Ľahko sa povie...", resultColor: "#9ca3af" },
+      { text: "Dáme potravinové poukážky!", icon: "🎫", moneyReward: 400, wantedChange: -1, resultText: "Aspoň niečo. Beriem!", resultColor: "#fbbf24" },
+    ],
+  },
+  {
+    title: "Dcéra odišla do Írska!",
+    description: "Vnúčatá nevidím rok! Dcéra odišla, tu nie je práca!",
+    icon: "😢",
+    citizenTypes: ["dochodkyna", "dochodca"],
+    options: [
+      { text: "Vrátime vašu dcéru domov!", icon: "✈️", moneyReward: 400, wantedChange: -1, resultText: "Keby sa to dalo...", resultColor: "#60a5fa" },
+      { text: "Za to môže Matovičov chaos!", icon: "😤", moneyReward: 300, wantedChange: 0, resultText: "Matovič! Ten za všetko môže!", resultColor: "#f59e0b" },
+      { text: "Dáme grant na návrat Slovákov!", icon: "💶", moneyReward: 500, wantedChange: -1, resultText: "To by bolo krásne!", resultColor: "#22c55e" },
+      { text: "V Írsku je dobre, nechajte ju", icon: "🤷", moneyReward: 0, wantedChange: 1, resultText: "...vy to fakt nemyslíte vážne.", resultColor: "#ef4444" },
     ],
   },
 ];

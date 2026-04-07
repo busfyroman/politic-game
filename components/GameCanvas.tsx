@@ -7,9 +7,9 @@ import {
 import {
   T, LEVELS, ENEMY_STATS, COMBO_MULTIPLIERS, COMBO_TIMEOUT, COMBO_COLORS,
   SKILLS, SKILL_QUOTES, STEAL_QUOTES, CAUGHT_QUOTES, VOICE_QUOTES,
-  GASPAR, CATCH_QUESTS, parseTile,
-  type LevelDef, type EnemyType, type TileType, type MinisterDef,
-  type CatchQuest, type CatchQuestOption,
+  GASPAR, CATCH_QUESTS, CITIZEN_QUESTS, CITIZEN_VISUAL, parseTile,
+  type LevelDef, type EnemyType, type TileType, type MinisterDef, type CitizenType,
+  type CatchQuest, type CatchQuestOption, type CitizenQuest, type CitizenQuestOption,
 } from "@/game/data/gameConfig";
 
 const PS = 26;
@@ -26,8 +26,11 @@ const DASH_DUR = 0.18;
 const DASH_COOLDOWN = 1.5;
 const ITEM_RESPAWN_FAST = 3;
 const ITEM_RESPAWN_SLOW = 8;
+const CITIZEN_INTERACT_R = 30;
+const CITIZEN_COOLDOWN = 20;
 
 interface Item { x: number; y: number; type: string; value: number; alive: boolean; respawnAt: number }
+interface CitizenState { x: number; y: number; type: CitizenType; cooldown: number }
 interface EnemyState {
   x: number; y: number; type: EnemyType;
   waypoints: { x: number; y: number }[]; wpIdx: number;
@@ -66,6 +69,7 @@ export const GameCanvas: React.FC<GameCanvasProps> = ({ minister, levelId, onBac
   const playerRef = useRef({ x: 0, y: 0, vx: 0, vy: 0, facing: 0 });
   const enemiesRef = useRef<EnemyState[]>([]);
   const itemsRef = useRef<Item[]>([]);
+  const citizensRef = useRef<CitizenState[]>([]);
   const floatsRef = useRef<FloatText[]>([]);
   const particlesRef = useRef<Particle[]>([]);
 
@@ -99,9 +103,11 @@ export const GameCanvas: React.FC<GameCanvasProps> = ({ minister, levelId, onBac
   const trailRef = useRef<{ x: number; y: number; born: number }[]>([]);
   const screenFlashRef = useRef({ active: false, color: "", born: 0, duration: 0 });
   const questActiveRef = useRef(false);
+  const citizenQuestActiveRef = useRef(false);
 
   const [, forceRender] = useState(0);
   const [activeQuest, setActiveQuest] = useState<{ quest: CatchQuest; basePenalty: number } | null>(null);
+  const [activeCitizenQuest, setActiveCitizenQuest] = useState<{ quest: CitizenQuest; citizenIdx: number } | null>(null);
 
   useEffect(() => {
     const img = new Image();
@@ -127,6 +133,7 @@ export const GameCanvas: React.FC<GameCanvasProps> = ({ minister, levelId, onBac
       x: d.waypoints[0].x, y: d.waypoints[0].y,
       type: d.type, waypoints: d.waypoints, wpIdx: 0, chasing: false, alertCooldown: 0, frozen: false,
     }));
+    citizensRef.current = lvl.citizens.map((d) => ({ x: d.x, y: d.y, type: d.type, cooldown: 0 }));
     playerRef.current = { x: lvl.spawnX, y: lvl.spawnY, vx: 0, vy: 0, facing: 0 };
     scoreRef.current = 0; wantedRef.current = 0; invulnRef.current = 0;
     timeRef.current = 0; catchesRef.current = 0; displayScoreRef.current = 0;
@@ -134,6 +141,7 @@ export const GameCanvas: React.FC<GameCanvasProps> = ({ minister, levelId, onBac
     floatsRef.current = []; particlesRef.current = [];
     completedRef.current = false; pausedRef.current = false;
     questActiveRef.current = false; setActiveQuest(null);
+    citizenQuestActiveRef.current = false; setActiveCitizenQuest(null);
     gasparRef.current = { active: false, x: 0, y: 0, targetX: 0, targetY: 0, phase: "done", timer: 0, moneyParticles: [] };
     dashRef.current = { active: false, timer: 0, cooldown: 0, dx: 0, dy: 0 };
     trailRef.current = [];
@@ -270,7 +278,7 @@ export const GameCanvas: React.FC<GameCanvasProps> = ({ minister, levelId, onBac
   useEffect(() => {
     const down = (e: KeyboardEvent) => {
       keysRef.current.add(e.code);
-      if (e.code === "Escape" && !questActiveRef.current) pausedRef.current = !pausedRef.current;
+      if (e.code === "Escape" && !questActiveRef.current && !citizenQuestActiveRef.current) pausedRef.current = !pausedRef.current;
       if (e.code === "Space" && !e.repeat) { e.preventDefault(); activateSkill(); }
       if (e.code === "Digit1") skillIndexRef.current = 0;
       if (e.code === "Digit2") skillIndexRef.current = 1;
@@ -424,6 +432,7 @@ export const GameCanvas: React.FC<GameCanvasProps> = ({ minister, levelId, onBac
       updatePlayer(dt);
       updateEnemies(dt);
       updateItems();
+      updateCitizens(dt);
       updateGaspar(dt);
       updateParticles(dt);
       updateFloats();
@@ -682,6 +691,28 @@ export const GameCanvas: React.FC<GameCanvasProps> = ({ minister, levelId, onBac
       }
     };
 
+    const updateCitizens = (dt: number) => {
+      const p = playerRef.current;
+      const citizens = citizensRef.current;
+      for (let i = 0; i < citizens.length; i++) {
+        const cit = citizens[i];
+        if (cit.cooldown > 0) { cit.cooldown -= dt; continue; }
+        const dx = p.x - cit.x;
+        const dy = p.y - cit.y;
+        const dist = Math.sqrt(dx * dx + dy * dy);
+        if (dist < CITIZEN_INTERACT_R) {
+          const matching = CITIZEN_QUESTS.filter((q) => q.citizenTypes.includes(cit.type));
+          if (matching.length === 0) continue;
+          const quest = matching[Math.floor(Math.random() * matching.length)];
+          citizenQuestActiveRef.current = true;
+          pausedRef.current = true;
+          setActiveCitizenQuest({ quest, citizenIdx: i });
+          gameSounds.coin();
+          break;
+        }
+      }
+    };
+
     const updateParticles = (dt: number) => {
       const now = timeRef.current;
       for (const part of particlesRef.current) {
@@ -818,6 +849,41 @@ export const GameCanvas: React.FC<GameCanvasProps> = ({ minister, levelId, onBac
           c.textAlign = "center";
           c.fillText("DOC", ix, iy + 2);
         }
+      }
+
+      // Citizens
+      for (const cit of citizensRef.current) {
+        const vis = CITIZEN_VISUAL[cit.type];
+        const onCooldown = cit.cooldown > 0;
+        const bob = Math.sin(now * 2 + cit.x * 0.1) * 1.5;
+
+        c.globalAlpha = onCooldown ? 0.4 : 1;
+
+        c.fillStyle = vis.bodyColor;
+        c.fillRect(cit.x - 8, cit.y - 2 + bob, 16, 18);
+
+        c.beginPath();
+        c.arc(cit.x, cit.y - 10 + bob, 8, 0, Math.PI * 2);
+        c.fillStyle = vis.headColor;
+        c.fill();
+
+        c.font = "12px sans-serif";
+        c.textAlign = "center";
+        c.fillText(vis.emoji, cit.x, cit.y - 22 + bob);
+
+        if (!onCooldown) {
+          const pulse = 0.6 + Math.sin(now * 4) * 0.4;
+          c.globalAlpha = pulse;
+          c.fillStyle = "#ffd700";
+          c.font = "bold 14px sans-serif";
+          c.fillText("!", cit.x, cit.y - 32 + bob);
+          c.beginPath();
+          c.arc(cit.x, cit.y - 36 + bob, 8, 0, Math.PI * 2);
+          c.strokeStyle = "rgba(255,215,0,0.3)";
+          c.lineWidth = 1;
+          c.stroke();
+        }
+        c.globalAlpha = 1;
       }
 
       // Dash trail
@@ -1268,6 +1334,11 @@ export const GameCanvas: React.FC<GameCanvasProps> = ({ minister, levelId, onBac
         c.fillRect(mmX + item.x * mmScale - 1, mmY + item.y * mmScale - 1, 2, 2);
       }
 
+      for (const cit of citizensRef.current) {
+        c.fillStyle = cit.cooldown > 0 ? "rgba(100,200,100,0.2)" : "rgba(100,200,100,0.6)";
+        c.fillRect(mmX + cit.x * mmScale - 1.5, mmY + cit.y * mmScale - 1.5, 3, 3);
+      }
+
       for (const e of enemiesRef.current) {
         c.fillStyle = e.chasing ? "#ef4444" : e.frozen ? "#88bbee" : "#3b82f6";
         c.fillRect(mmX + e.x * mmScale - 2, mmY + e.y * mmScale - 2, 4, 4);
@@ -1335,7 +1406,7 @@ export const GameCanvas: React.FC<GameCanvasProps> = ({ minister, levelId, onBac
         c.fill();
       }
 
-      if (pausedRef.current && !questActiveRef.current) {
+      if (pausedRef.current && !questActiveRef.current && !citizenQuestActiveRef.current) {
         c.fillStyle = "rgba(0,0,0,0.8)";
         c.fillRect(0, 0, cw, ch);
         c.fillStyle = "#ffd700";
@@ -1446,6 +1517,43 @@ export const GameCanvas: React.FC<GameCanvasProps> = ({ minister, levelId, onBac
     return hints;
   };
 
+  const handleCitizenChoice = (option: CitizenQuestOption) => {
+    if (!activeCitizenQuest) return;
+
+    if (option.moneyCost) {
+      scoreRef.current = Math.max(0, scoreRef.current - option.moneyCost);
+    }
+    scoreRef.current += option.moneyReward;
+    wantedRef.current = Math.max(0, Math.min(10, wantedRef.current + option.wantedChange));
+
+    addFloat(option.resultText, playerRef.current.x, playerRef.current.y - 40, option.resultColor, 2.5, 16);
+    if (option.moneyReward > 0) {
+      addFloat(`+${option.moneyReward} €`, playerRef.current.x + 20, playerRef.current.y - 15, "#22c55e", 1.2, 18);
+    }
+    if (option.moneyCost) {
+      addFloat(`-${option.moneyCost} €`, playerRef.current.x - 20, playerRef.current.y - 15, "#ef4444", 1, 14);
+    }
+    addParticles(playerRef.current.x, playerRef.current.y, option.resultColor, 10);
+
+    if (option.moneyReward >= 400) gameSounds.gold();
+    else if (option.moneyReward > 0) gameSounds.money();
+
+    citizensRef.current[activeCitizenQuest.citizenIdx].cooldown = CITIZEN_COOLDOWN;
+
+    citizenQuestActiveRef.current = false;
+    pausedRef.current = false;
+    setActiveCitizenQuest(null);
+  };
+
+  const getCitizenHints = (opt: CitizenQuestOption): { text: string; positive: boolean }[] => {
+    const hints: { text: string; positive: boolean }[] = [];
+    if (opt.moneyReward > 0) hints.push({ text: `+${opt.moneyReward.toLocaleString("sk-SK")} €`, positive: true });
+    if (opt.moneyCost) hints.push({ text: `-${opt.moneyCost.toLocaleString("sk-SK")} €`, positive: false });
+    if (opt.wantedChange > 0) hints.push({ text: `Wanted +${opt.wantedChange}`, positive: false });
+    else if (opt.wantedChange < 0) hints.push({ text: `Wanted ${opt.wantedChange}`, positive: true });
+    return hints;
+  };
+
   return (
     <div
       ref={containerRef}
@@ -1488,6 +1596,60 @@ export const GameCanvas: React.FC<GameCanvasProps> = ({ minister, levelId, onBac
                   <button
                     key={i}
                     onClick={() => handleQuestChoice(opt)}
+                    className="group flex flex-col gap-1 rounded-xl border border-white/10 bg-white/[0.03] px-4 py-3 text-left transition-all hover:border-yellow-500/40 hover:bg-yellow-900/10 active:scale-[0.98]"
+                  >
+                    <div className="flex items-center gap-2">
+                      <span className="text-lg">{opt.icon}</span>
+                      <span className="text-sm font-bold text-white/80 group-hover:text-yellow-300">{opt.text}</span>
+                    </div>
+                    <div className="flex flex-wrap gap-1.5 pl-7">
+                      {hints.map((h, j) => (
+                        <span
+                          key={j}
+                          className={`rounded px-1.5 py-0.5 text-[10px] font-semibold ${
+                            h.positive
+                              ? "bg-green-500/15 text-green-400"
+                              : "bg-red-500/15 text-red-400"
+                          }`}
+                        >
+                          {h.text}
+                        </span>
+                      ))}
+                    </div>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {activeCitizenQuest && (
+        <div
+          className="absolute inset-0 z-30 flex items-center justify-center bg-black/80 backdrop-blur-sm"
+          onTouchStart={(e) => e.stopPropagation()}
+          onTouchMove={(e) => e.stopPropagation()}
+          onTouchEnd={(e) => e.stopPropagation()}
+        >
+          <div
+            className="mx-4 w-full max-w-md animate-in fade-in zoom-in duration-300 rounded-2xl border border-yellow-500/30 bg-gradient-to-b from-[#1a1408] to-[#0a0a14] p-5 shadow-[0_0_60px_rgba(255,215,0,0.12)]"
+          >
+            <div className="mb-3 text-center">
+              <div className="mb-1 text-4xl">{activeCitizenQuest.quest.icon}</div>
+              <h2 className="text-lg font-black text-yellow-400">{activeCitizenQuest.quest.title}</h2>
+              <p className="mt-1 text-xs text-white/40">{activeCitizenQuest.quest.description}</p>
+              <div className="mt-2 inline-block rounded-lg bg-yellow-500/10 px-3 py-1 text-[11px] font-bold text-yellow-400/70">
+                {CITIZEN_VISUAL[citizensRef.current[activeCitizenQuest.citizenIdx]?.type]?.name ?? "Občan"} chce počuť odpoveď
+              </div>
+            </div>
+
+            <div className="mt-4 flex flex-col gap-2">
+              {activeCitizenQuest.quest.options.map((opt, i) => {
+                const hints = getCitizenHints(opt);
+                return (
+                  <button
+                    key={i}
+                    onClick={() => handleCitizenChoice(opt)}
                     className="group flex flex-col gap-1 rounded-xl border border-white/10 bg-white/[0.03] px-4 py-3 text-left transition-all hover:border-yellow-500/40 hover:bg-yellow-900/10 active:scale-[0.98]"
                   >
                     <div className="flex items-center gap-2">
